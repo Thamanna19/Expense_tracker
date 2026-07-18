@@ -26,9 +26,9 @@ SECRET_KEY = 'django-insecure-%vfq!=e=qymgaz&45ur1@mb5(+!697hobs&=wp!$w2n)6!c3^v
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "127.0.0.1",
     "localhost",
-    "expense-tracker-av9ue8rdc-thamanna19s-projects.vercel.app",
+    "127.0.0.1",
+    ".vercel.app",
 ]
 
 
