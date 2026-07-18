@@ -80,11 +80,10 @@ WSGI_APPLICATION = 'expenseplanner.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL")
+    "default": dj_database_url.parse(
+        "postgresql://neondb_owner:npg_Eb3U2tINmqfp@ep-raspy-tree-azia4f00.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
     )
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
