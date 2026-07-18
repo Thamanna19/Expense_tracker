@@ -25,7 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-%vfq!=e=qymgaz&45ur1@mb5(+!697hobs&=wp!$w2n)6!c3^v'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Vercel does not set DEBUG, so deployments are production by default.
+DEBUG = os.environ.get('DEBUG', '').lower() == 'true'
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -48,6 +49,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serve the files produced by collectstatic from the Vercel Python function.
+    # This must be directly after SecurityMiddleware.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -124,6 +128,19 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# `static/` is the source directory.  During the Vercel build, collectstatic
+# copies it (and any app static directories) here for WhiteNoise to serve.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Django 6 configures static storage through STORAGES.  Compressed storage is
+# cache-friendly while avoiding manifest-only lookup failures on serverless
+# deployments.
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
