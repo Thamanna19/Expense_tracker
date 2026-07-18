@@ -1,0 +1,49 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spendly | Statements</title>
+  <link rel="stylesheet" href="{% static 'planner.css' %}">
+  <link rel="stylesheet" href="{% static 'theme.css' %}">
+</head>
+
+<body>
+  <header class="topbar"><a class="brand" href="{% url 'home' %}"><span>o</span> spendly</a>
+    <nav class="main-nav" aria-label="Main navigation"><a href="{% url 'home' %}">Dashboard</a><a
+        href="{% url 'analytics' %}">Analytics</a><a class="active" href="{% url 'statements' %}">Statements</a></nav>
+    <div class="user">Hello, {{ request.user.username }} <a href="{% url 'logout' %}">Log out</a></div>
+  </header>
+  <main class="container">
+    <section class="hero page-hero">
+      <div>
+        <p class="eyebrow">ALL-TIME STATEMENT</p>
+        <h1>Your money history.</h1>
+        <p>Review every expense you have recorded, or narrow it down with filters.</p>
+      </div>
+      <article class="statement-total"><span>Total shown</span><strong>Rs. {{ total_spent|floatformat:2 }}</strong><small>Across the selected entries</small></article>
+    </section>
+    <section class="panel full-statement">
+      <form class="statement-filters" method="get"><label>Category<select name="category">
+            <option value="">All categories</option>
+            {% for value, label in categories %}
+              <option value="{{ value }}"{% if selected_category == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select></label><label>From<input type="date" name="from"
+            value="{{ start_date|date:'Y-m-d' }}"></label><label>To<input type="date" name="to"
+            value="{{ end_date|date:'Y-m-d' }}"></label><button class="primary">Apply filters</button><a
+          href="{% url 'statements' %}">Clear</a></form>
+      {% if expenses %}<div class="statement-table">
+        <div class="statement-row table-head">
+          <span>Date</span><span>Description</span><span>Category</span><span>Amount</span></div>
+        {% for expense in expenses %}
+          <article class="statement-row"><time>{{ expense.spent_on|date:"d M Y" }}</time><strong>{{ expense.title }}</strong><span><i class="category-dot {{ expense.category }}"></i>{{ expense.get_category_display }}</span><b>- Rs. {{ expense.amount|floatformat:2 }}</b></article>
+        {% endfor %}
+      </div>{% else %}<div class="no-expenses">No expenses match these filters yet.</div>{% endif %}
+    </section>
+  </main>
+</body>
+
+</html>

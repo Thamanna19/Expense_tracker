@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in | Spendly</title>
+    <link rel="stylesheet" href="{% static 'planner.css' %}">
+</head>
+
+<body class="auth-page">
+    <main class="auth-card"><a class="brand" href="{% url 'login' %}"><span>◔</span> spendly</a>
+        <p class="eyebrow">WELCOME BACK</p>
+        <h1>Sign in to your budget.</h1>
+        <p class="auth-copy">Keep your spending clear and your goals in sight.</p>{% if error %}<div
+            class="message error">{{ error }}</div>{% endif %}<form method="post" class="auth-form">{% csrf_token %}<label>Username<input name="username" required autofocus></label><label>Password<input name="password"
+                    type="password" required></label><button class="primary">Sign in <span>→</span></button></form>
+        <p class="switch">New to Spendly? <a href="{% url 'signup' %}">Create an account</a></p>
+    </main>
+</body>
+
+</html>

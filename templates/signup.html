@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create account | Spendly</title>
+    <link rel="stylesheet" href="{% static 'planner.css' %}">
+</head>
+
+<body class="auth-page">
+    <main class="auth-card"><a class="brand" href="{% url 'login' %}"><span>◔</span> spendly</a>
+        <p class="eyebrow">GET STARTED</p>
+        <h1>Build better money habits.</h1>
+        <p class="auth-copy">Create your account and start tracking what matters.</p>
+        <form method="post" class="auth-form">{% csrf_token %}{% if form.non_field_errors %}<div class="message error">
+                {{ form.non_field_errors }}</div>{% endif %}<label>Username<input name="username"
+                    value="{{ form.username.value|default:'' }}" required autofocus></label>{% if form.username.errors %}<small class="field-error">{{ form.username.errors|striptags }}</small>{% endif %}<label>Password<input
+                    name="password1" type="password" required></label>{% if form.password1.errors %}<small
+                class="field-error">{{ form.password1.errors|striptags }}</small>{% endif %}<label>Confirm
+                password<input name="password2" type="password" required></label>{% if form.password2.errors %}<small
+                class="field-error">{{ form.password2.errors|striptags }}</small>{% endif %}<button
+                class="primary">Create account <span>→</span></button></form>
+        <p class="switch">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+    </main>
+</body>
+
+</html>

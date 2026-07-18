@@ -1,0 +1,85 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spendly | Analytics</title>
+  <link rel="stylesheet" href="{% static 'planner.css' %}">
+  <link rel="stylesheet" href="{% static 'theme.css' %}">
+  <style>
+    .trend-chart {
+      height: 205px;
+    }
+
+    .trend-chart .grid-line {
+      stroke: #eeeaf4;
+      stroke-width: 1;
+      stroke-dasharray: 3 5;
+    }
+
+    .trend-chart .bar {
+      opacity: .9;
+    }
+
+    .trend-chart .bar:hover {
+      opacity: 1;
+    }
+
+    .trend-chart .axis-value,
+    .trend-chart .axis-date,
+    .trend-chart .axis-title {
+      fill: #878198;
+      font: 11px Arial, Helvetica, sans-serif;
+    }
+
+    .trend-chart .axis-title {
+      fill: #68627a;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar"><a class="brand" href="{% url 'home' %}"><span>o</span> spendly</a>
+    <nav class="main-nav" aria-label="Main navigation"><a href="{% url 'home' %}">Dashboard</a><a class="active"
+        href="{% url 'analytics' %}">Analytics</a><a href="{% url 'statements' %}">Statements</a></nav>
+    <div class="user">Hello, {{ request.user.username }} <a href="{% url 'logout' %}">Log out</a></div>
+  </header>
+  <main class="container">
+    <section class="hero page-hero">
+      <div>
+        <p class="eyebrow">SPENDING ANALYTICS</p>
+        <h1>Weekly category spending.</h1>
+        <p>A clear daily view of your spending from {{ start_date|date:"d M" }} to {{ today|date:"d M Y" }}.</p>
+      </div><span class="period-label">Last 7 days</span>
+    </section>
+    <section class="trend-grid">{% for chart in charts %}<article class="panel trend-card">
+        <div class="trend-heading">
+          <div>
+            <p class="eyebrow">{{ chart.label|upper }}</p>
+            <h2>Rs. {{ chart.total|floatformat:2 }}</h2><small>Total spent in this period</small>
+          </div><i aria-hidden="true" style="background: {{ chart.color }}"></i>
+        </div><svg class="trend-chart" viewBox="0 0 640 230" role="img"
+          aria-label="{{ chart.label }} daily spending bar graph with dates on the x-axis and amounts on the y-axis">
+          <g id="chart-{{ forloop.counter }}"></g>
+        </svg>
+      </article>{% endfor %}</section>
+  </main>
+  <script>
+    const charts = {{ chart_data_json| safe }}, svgNs = 'http://www.w3.org/2000/svg';
+    const add = (parent, name, attributes = {}, value = '') => { const element = document.createElementNS(svgNs, name); Object.entries(attributes).forEach(([key, attributeValue]) => element.setAttribute(key, attributeValue)); element.textContent = value; parent.appendChild(element); };
+    charts.forEach((chart, index) => {
+      const group = document.getElementById(`chart-${index + 1}`), left = 64, right = 18, top = 18, bottom = 48, width = 640 - left - right, height = 230 - top - bottom;
+      const maximum = Math.max(...chart.values, 1), scaleMaximum = Math.ceil(maximum / 10) * 10 || 1;
+      [0, 0.5, 1].forEach((fraction) => { const value = scaleMaximum * fraction, y = top + height - (height * fraction); add(group, 'line', { class: 'grid-line', x1: left, y1: y, x2: left + width, y2: y }); add(group, 'text', { class: 'axis-value', x: left - 9, y: y + 4, 'text-anchor': 'end' }, `Rs. ${value.toFixed(0)}`); });
+      const slot = width / chart.values.length;
+      chart.values.forEach((value, day) => { const barHeight = (value / scaleMaximum) * height, barWidth = slot * 0.58, x = left + (slot * day) + ((slot - barWidth) / 2), y = top + height - barHeight; add(group, 'rect', { class: 'bar', x, y, width: barWidth, height: barHeight, rx: 4, fill: chart.color }); add(group, 'text', { class: 'axis-date', x: left + (slot * day) + (slot / 2), y: top + height + 18, 'text-anchor': 'middle' }, chart.dates[day]); });
+      add(group, 'text', { class: 'axis-title', x: left + (width / 2), y: 226, 'text-anchor': 'middle' }, 'Date');
+      add(group, 'text', { class: 'axis-title', x: 15, y: top + (height / 2), transform: `rotate(-90 15 ${top + (height / 2)})`, 'text-anchor': 'middle' }, 'Amount (Rs.)');
+    });
+  </script>
+</body>
+
+</html>

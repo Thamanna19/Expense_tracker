@@ -1,0 +1,154 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spendly | Dashboard</title>
+  <link rel="stylesheet" href="{% static 'planner.css' %}">
+  <link rel="stylesheet" href="{% static 'notes.css' %}">
+  <link rel="stylesheet" href="{% static 'theme.css' %}">
+</head>
+
+<body>
+  <header class="topbar"><a class="brand" href="{% url 'home' %}"><span>o</span> spendly</a>
+    <nav class="main-nav" aria-label="Main navigation"><a class="active" href="{% url 'home' %}">Dashboard</a><a
+        href="{% url 'analytics' %}">Analytics</a><a href="{% url 'statements' %}">Statements</a></nav>
+    <div class="user">Hello, {{ request.user.username }} <a href="{% url 'logout' %}">Log out</a></div>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">{{ selected_date|date:"l, d F" }}</p>
+        <h1>{% if selected_date == today %}Good day{% else %}Your daily summary{% endif %}, {{ request.user.username }}.
+        </h1>
+        <p>Review how your money moved on this day.</p>
+      </div>
+      <div class="hero-actions">
+        <form class="date-picker" method="get"><label>View a saved day</label><input type="date" name="date"
+            value="{{ selected_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" onchange="this.form.submit()">
+        </form>
+        <form class="budget-form" method="post">{% csrf_token %}<input type="hidden" name="action"
+            value="budget"><label>Daily budget</label>
+          <div><span>Rs.</span><input type="number" name="budget_amount" min="0" step="0.01"
+              value="{{ budget }}"><button>Save</button></div>
+        </form>
+      </div>
+    </section>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    <section class="summary">
+      <article class="card purple">
+        <p>Daily budget</p>
+        <h2>Rs. {{ budget|floatformat:2 }}</h2><small>Your planned daily spend</small>
+      </article>
+      <article class="card coral">
+        <p>Spent on {{ selected_date|date:"d M" }}</p>
+        <h2>Rs. {{ spent_today|floatformat:2 }}</h2><small>Across all categories</small>
+      </article>
+      <article class="card teal">
+        <p>Remaining</p>
+        <h2>Rs. {{ remaining|floatformat:2 }}</h2><small>{% if remaining < 0 %}Over your budget{% else %}Still
+            available{% endif %}</small>
+      </article>
+    </section>
+    <section class="layout">
+      <div class="panel add-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">NEW ENTRY</p>
+            <h2>Add an expense</h2>
+          </div><span></span>
+        </div>
+        <form method="post" class="expense-form">{% csrf_token %}<input type="hidden" name="action"
+            value="expense"><label>What did you spend on?<input name="title" placeholder="e.g. Lunch at cafe" required
+              maxlength="100"></label>
+          <div class="form-row"><label>Amount<input name="amount" type="number" placeholder="0.00" min="0.01"
+                step="0.01" required></label><label>Category<select name="category" required>
+                <option value="" selected disabled>Select category</option>{% for value,label in categories %}<option
+                  value="{{ value }}">{{ label }}</option>{% endfor %}
+              </select></label></div><button class="primary">Add expense <span>&rarr;</span></button>
+        </form>
+      </div>
+      <div class="panel chart-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">BREAKDOWN</p>
+            <h2>Spending by category</h2>
+          </div>
+        </div>{% if chart_data %}<div class="chart-wrap">
+          <div class="donut" id="donut">
+            <div><strong>Rs. {{ spent_today|floatformat:0 }}</strong><span>spent</span></div>
+          </div>
+          <div class="legend">{% for item in chart_data %}<div><i style="background:{{ item.color }}"></i><span>{{ item.label }}</span><b>Rs. {{ item.total|floatformat:0 }}</b></div>{% endfor %}</div>
+        </div>{% else %}<div class="empty-chart"><span>o</span>
+          <p>Add an expense to see your<br>spending breakdown.</p>
+        </div>{% endif %}
+      </div>
+    </section>
+    <section class="panel notes">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">SAVINGS NOTE</p>
+          <h2>Plan for your money</h2>
+        </div><span></span>
+      </div>
+      <p>Write a daily reminder, saving goal, or an idea for spending less.</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="note"><textarea name="content"
+          maxlength="1000" placeholder="Example: Take lunch from home tomorrow to save Rs. 150."></textarea><button
+          class="note-save">Save note</button></form>
+    </section>
+    {% if day_notes %}<section class="saved-note">
+      <div class="saved-note-icon">*</div>
+      <div>
+        <p class="eyebrow">SAVED FOR {{ selected_date|date:"d M Y" }}</p>
+        <p class="saved-note-label">Your savings reminders</p>{% for day_note in day_notes %}<p class="saved-note-text">
+          {{ day_note.content|linebreaksbr }}</p>{% endfor %}
+      </div>
+    </section>{% endif %}
+    {% if previous_notes %}<section class="panel previous-notes">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">NOTE HISTORY</p>
+          <h2>Previous savings notes</h2>
+        </div>
+      </div>
+      <div class="previous-note-list">{% for previous_note in previous_notes %}<article><time>{{ previous_note.note_date|date:"d M Y" }}</time>
+          <p>{{ previous_note.content|linebreaksbr }}</p><a
+            href="{% url 'home' %}?date={{ previous_note.note_date|date:'Y-m-d' }}">Open day</a>
+        </article>{% endfor %}</div>
+    </section>{% endif %}
+    <section class="panel statement">
+      <div class="statement-header">
+        <div>
+          <p class="eyebrow">DAILY STATEMENT</p>
+          <h2>Where your money went</h2>
+        </div>
+        <form method="get"><input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}"><select
+            name="category" onchange="this.form.submit()">
+            <option value="">All categories</option>
+            {% for value, label in categories %}
+              <option value="{{ value }}"{% if selected_category == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select></form>
+      </div>{% if expenses %}<div class="expense-list">{% for expense in expenses %}<article>
+          <div class="expense-icon {{ expense.category }}">{{ expense.get_category_display|slice:":1" }}</div>
+          <div class="expense-name">
+            <h3>{{ expense.title }}</h3>
+            <p>{{ expense.get_category_display }} - {{ expense.spent_on|date:"d M" }}</p>
+          </div><strong>- Rs. {{ expense.amount|floatformat:2 }}</strong>
+        </article>{% endfor %}</div>{% else %}<div class="no-expenses">No expenses {% if selected_category %}in this
+        category {% endif %}on this date.</div>{% endif %}
+    </section>
+  </main>
+  {% if chart_data %}
+  <script>const data = {{ chart_data_json|safe }}; const total = data.reduce((s, x) => s + x.total, 0); let point = 0; const stops = data.map(x => { let next = point + x.total / total * 360, s = `${x.color} ${point}deg ${next}deg`; point = next; return s }); document.getElementById('donut').style.background = `conic-gradient(${stops.join(',')})`;</script>
+  {% endif %}
+</body>
+
+</html>
+
