@@ -12,7 +12,7 @@
 <body class="auth-page">
     <main class="auth-card"><a class="brand" href="{% url 'login' %}"><span>◔</span> spendly</a>
         <p class="eyebrow">WELCOME BACK</p>
-        <h1>Sign in to your budget.</h1>
+        <h1>Track your expenses. Stay on budget.</h1>
         <p class="auth-copy">Keep your spending clear and your goals in sight.</p>{% if error %}<div
             class="message error">{{ error }}</div>{% endif %}<form method="post" class="auth-form">{% csrf_token %}<label>Username<input name="username" required autofocus></label><label>Password<input name="password"
                     type="password" required></label><button class="primary">Sign in <span>→</span></button></form>
