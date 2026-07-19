@@ -8,6 +8,7 @@
   <title>Spendly | Analytics</title>
   <link rel="stylesheet" href="{% static 'planner.css' %}">
   <link rel="stylesheet" href="{% static 'theme.css' %}">
+  <link rel="stylesheet" href="{% static 'dashboard-enhancements.css' %}">
   <style>
     .trend-chart {
       height: 205px;
@@ -26,6 +27,9 @@
     .trend-chart .bar:hover {
       opacity: 1;
     }
+
+    .trend-chart .trend-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .trend-chart .point { stroke: #fff; stroke-width: 2; }
 
     .trend-chart .axis-value,
     .trend-chart .axis-date,
@@ -51,9 +55,14 @@
     <section class="hero page-hero">
       <div>
         <p class="eyebrow">SPENDING ANALYTICS</p>
-        <h1>Weekly category spending.</h1>
-        <p>A clear daily view of your spending from {{ start_date|date:"d M" }} to {{ today|date:"d M Y" }}.</p>
-      </div><span class="period-label">Last 7 days</span>
+        <h1>{{ title }} category spending.</h1>
+        <p>A clear view of your spending from {{ start_date|date:"d M Y" }} to {{ end_date|date:"d M Y" }}.</p>
+      </div><form method="get" class="analytics-period-form"><label class="period-picker" for="period">View period</label><select id="period" name="period" onchange="this.form.submit()">
+          <option value="week"{% if period == 'week' %} selected{% endif %}>Current week (bar)</option>
+          <option value="month"{% if period == 'month' %} selected{% endif %}>Previous month (line)</option>
+          <option value="two_months"{% if period == 'two_months' %} selected{% endif %}>Previous 2 months (line)</option>
+          <option value="year"{% if period == 'year' %} selected{% endif %}>Last year (line)</option>
+        </select></form>
     </section>
     <section class="trend-grid">{% for chart in charts %}<article class="panel trend-card">
         <div class="trend-heading">
@@ -62,7 +71,7 @@
             <h2>Rs. {{ chart.total|floatformat:2 }}</h2><small>Total spent in this period</small>
           </div><i aria-hidden="true" style="background: {{ chart.color }}"></i>
         </div><svg class="trend-chart" viewBox="0 0 640 230" role="img"
-          aria-label="{{ chart.label }} daily spending bar graph with dates on the x-axis and amounts on the y-axis">
+          aria-label="{{ chart.label }} spending {{ chart_type }} graph with dates on the x-axis and amounts on the y-axis">
           <g id="chart-{{ forloop.counter }}"></g>
         </svg>
       </article>{% endfor %}</section>
@@ -74,8 +83,16 @@
       const group = document.getElementById(`chart-${index + 1}`), left = 64, right = 18, top = 18, bottom = 48, width = 640 - left - right, height = 230 - top - bottom;
       const maximum = Math.max(...chart.values, 1), scaleMaximum = Math.ceil(maximum / 10) * 10 || 1;
       [0, 0.5, 1].forEach((fraction) => { const value = scaleMaximum * fraction, y = top + height - (height * fraction); add(group, 'line', { class: 'grid-line', x1: left, y1: y, x2: left + width, y2: y }); add(group, 'text', { class: 'axis-value', x: left - 9, y: y + 4, 'text-anchor': 'end' }, `Rs. ${value.toFixed(0)}`); });
-      const slot = width / chart.values.length;
-      chart.values.forEach((value, day) => { const barHeight = (value / scaleMaximum) * height, barWidth = slot * 0.58, x = left + (slot * day) + ((slot - barWidth) / 2), y = top + height - barHeight; add(group, 'rect', { class: 'bar', x, y, width: barWidth, height: barHeight, rx: 4, fill: chart.color }); add(group, 'text', { class: 'axis-date', x: left + (slot * day) + (slot / 2), y: top + height + 18, 'text-anchor': 'middle' }, chart.dates[day]); });
+      const slot = width / chart.values.length, lineGraph = '{{ chart_type }}' === 'line', labelEvery = chart.values.length > 60 ? 6 : chart.values.length > 31 ? 3 : chart.values.length > 14 ? 2 : 1;
+      if (lineGraph) {
+        const pointX = (position) => left + (chart.values.length === 1 ? width / 2 : (width * position / (chart.values.length - 1)));
+        const pointY = (value) => top + height - ((value / scaleMaximum) * height);
+        const path = chart.values.map((value, position) => `${position ? 'L' : 'M'} ${pointX(position)} ${pointY(value)}`).join(' ');
+        add(group, 'path', { class: 'trend-line', d: path, stroke: chart.color });
+        chart.values.forEach((value, position) => { const x = pointX(position), y = pointY(value); add(group, 'circle', { class: 'point', cx: x, cy: y, r: 3.5, fill: chart.color }); if (position % labelEvery === 0 || position === chart.values.length - 1) add(group, 'text', { class: 'axis-date', x, y: top + height + 18, 'text-anchor': position === 0 ? 'start' : position === chart.values.length - 1 ? 'end' : 'middle' }, chart.dates[position]); });
+      } else {
+        chart.values.forEach((value, day) => { const barHeight = (value / scaleMaximum) * height, barWidth = slot * 0.58, x = left + (slot * day) + ((slot - barWidth) / 2), y = top + height - barHeight; add(group, 'rect', { class: 'bar', x, y, width: barWidth, height: barHeight, rx: 4, fill: chart.color }); add(group, 'text', { class: 'axis-date', x: left + (slot * day) + (slot / 2), y: top + height + 18, 'text-anchor': 'middle' }, chart.dates[day]); });
+      }
       add(group, 'text', { class: 'axis-title', x: left + (width / 2), y: 226, 'text-anchor': 'middle' }, 'Date');
       add(group, 'text', { class: 'axis-title', x: 15, y: top + (height / 2), transform: `rotate(-90 15 ${top + (height / 2)})`, 'text-anchor': 'middle' }, 'Amount (Rs.)');
     });

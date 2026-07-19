@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Sum
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
@@ -79,6 +79,10 @@ def home(request):
                 messages.success(request, 'Expense added.')
             except Exception:
                 messages.error(request, 'Please complete the expense with a valid amount and category.')
+        elif action == 'delete_expense':
+            expense = get_object_or_404(Expense, pk=request.POST.get('expense_id'), user=request.user)
+            expense.delete()
+            messages.success(request, 'Expense deleted.')
         elif action == 'note':
             content = request.POST.get('content', '').strip()
             if content:
@@ -115,26 +119,71 @@ def home(request):
 
 @login_required(login_url='login')
 def analytics(request):
-    """Show a seven-day daily spending bar chart for each expense category."""
+    """Show spending trends using bars for a week and lines for longer periods."""
     today = timezone.localdate()
-    start_date = today - timedelta(days=6)
-    expenses = Expense.objects.filter(user=request.user, spent_on__range=(start_date, today))
-    totals_by_day = {
-        (row['category'], row['spent_on'].isoformat()): float(row['total'])
-        for row in expenses.values('category', 'spent_on').annotate(total=Sum('amount'))
+    period = request.GET.get('period', 'week')
+    period_options = {
+        'week': ('Current week', 'Last 7 days', today - timedelta(days=6), today, 'bar', 'daily'),
+        'month': ('Previous month', 'Previous calendar month', None, None, 'line', 'daily'),
+        'two_months': ('Previous 2 months', 'Previous two calendar months', None, None, 'line', 'daily'),
+        'year': ('Last year', 'Last 12 months', None, None, 'line', 'monthly'),
     }
-    dates = [start_date + timedelta(days=offset) for offset in range(7)]
+    if period not in period_options:
+        period = 'week'
+
+    title, period_label, start_date, end_date, chart_type, grouping = period_options[period]
+    if period == 'month':
+        first_of_this_month = today.replace(day=1)
+        end_date = first_of_this_month - timedelta(days=1)
+        start_date = end_date.replace(day=1)
+    elif period == 'two_months':
+        first_of_this_month = today.replace(day=1)
+        end_date = first_of_this_month - timedelta(days=1)
+        start_of_previous_month = end_date.replace(day=1)
+        start_date = (start_of_previous_month - timedelta(days=1)).replace(day=1)
+    elif period == 'year':
+        end_date = today
+        start_date = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
+        for _ in range(10):
+            start_date = (start_date - timedelta(days=1)).replace(day=1)
+
+    expenses = Expense.objects.filter(user=request.user, spent_on__range=(start_date, today))
+    if end_date != today:
+        expenses = expenses.filter(spent_on__lte=end_date)
+
+    if grouping == 'daily':
+        points = [start_date + timedelta(days=offset) for offset in range((end_date - start_date).days + 1)]
+        keys = [point.isoformat() for point in points]
+        labels = [point.strftime('%d %b') for point in points]
+        totals = {
+            (row['category'], row['spent_on'].isoformat()): float(row['total'])
+            for row in expenses.values('category', 'spent_on').annotate(total=Sum('amount'))
+        }
+    else:
+        points = []
+        cursor = start_date
+        while cursor <= end_date:
+            points.append(cursor)
+            cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+        keys = [point.strftime('%Y-%m') for point in points]
+        labels = [point.strftime('%b %Y') for point in points]
+        totals = {
+            (row['category'], row['spent_on'].strftime('%Y-%m')): float(row['total'])
+            for row in expenses.values('category', 'spent_on').annotate(total=Sum('amount'))
+        }
+
     colors = ['#6c63ff', '#ff8a65', '#26a69a', '#f4b942', '#ec6c89', '#4b8cff', '#9c6ade']
     charts = []
     for index, (value, label) in enumerate(Expense.Category.choices):
-        values = [totals_by_day.get((value, day.isoformat()), 0) for day in dates]
+        values = [totals.get((value, key), 0) for key in keys]
         charts.append({
             'label': label, 'color': colors[index], 'values': values,
-            'dates': [day.strftime('%d %b') for day in dates], 'total': sum(values),
+            'dates': labels, 'total': sum(values),
         })
     return render(request, 'analytics.html', {
         'charts': charts, 'chart_data_json': json.dumps(charts),
-        'start_date': start_date, 'today': today,
+        'start_date': start_date, 'end_date': end_date, 'today': today,
+        'period': period, 'period_label': period_label, 'chart_type': chart_type, 'title': title,
     })
 
 

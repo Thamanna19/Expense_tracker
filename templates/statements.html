@@ -32,6 +32,7 @@
               <option value="{{ value }}"{% if selected_category == value %} selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select></label><label>From<input type="date" name="from"
+
             value="{{ start_date|date:'Y-m-d' }}"></label><label>To<input type="date" name="to"
             value="{{ end_date|date:'Y-m-d' }}"></label><button class="primary">Apply filters</button><a
           href="{% url 'statements' %}">Clear</a></form>

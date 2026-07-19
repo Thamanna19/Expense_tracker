@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{% static 'planner.css' %}">
   <link rel="stylesheet" href="{% static 'notes.css' %}">
   <link rel="stylesheet" href="{% static 'theme.css' %}">
+  <link rel="stylesheet" href="{% static 'dashboard-enhancements.css' %}">
 </head>
 
 <body>
@@ -141,6 +142,10 @@
             <h3>{{ expense.title }}</h3>
             <p>{{ expense.get_category_display }} - {{ expense.spent_on|date:"d M" }}</p>
           </div><strong>- Rs. {{ expense.amount|floatformat:2 }}</strong>
+          <form method="post" class="delete-expense-form" onsubmit="return confirm('Delete {{ expense.title|escapejs }}? This cannot be undone.');">{% csrf_token %}
+            <input type="hidden" name="action" value="delete_expense"><input type="hidden" name="expense_id" value="{{ expense.id }}">
+            <button type="submit" class="delete-expense" aria-label="Delete {{ expense.title }}">Delete</button>
+          </form>
         </article>{% endfor %}</div>{% else %}<div class="no-expenses">No expenses {% if selected_category %}in this
         category {% endif %}on this date.</div>{% endif %}
     </section>
@@ -151,4 +156,3 @@
 </body>
 
 </html>
-
